@@ -1,0 +1,2 @@
+# run myTV every two hours
+0 * * * *     root   /usr/sbin/mytv

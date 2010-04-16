@@ -1,0 +1,46 @@
+0.1.1 -
+-  Removed some debug code.
+-  Added constants for TRUE & FALSE.
+-  Reworked some functions so that return values ane locations are more
+   consistant.
+-  Added consistancy to error messages.
+0.1.1 - December 20, 2009
+-  Fixed an issue with the format of the torrent URL when adding a
+   torrent.
+-  Added error messages when unable to add torrent.
+-  Removed unneccessary code.
+0.1.0 - December 15, 2009
+-  Renamed to myTV.
+-  Moved all torrent commands to subroutines.
+-  Removed dependency on Transmission-remote. Now communicates with
+   transmission-daemon via http post
+-  Cleaned up variable usage.
+-  Added basic config options check.
+-  Added printDebug function.
+-  Added a check to ensure daemon is running.
+-  Added twitter notification of completed torrents.
+-  Changed history file format - removed hash and replaced with parsed show
+   information.  This will allow for multiple sources for feeds.
+-  Verified support for showRSS (http://showrss.karmorra.info/).
+-  Removed feedInterval,transmissionArgs & transmissionBin config options,
+   as they are no longer required.
+0.0.5 - October 7, 2009
+-  More code cleanup.
+-  Added auto removal of torrents based on share ratio.
+-  Added move of completed torrents to user defined destination.
+0.0.4 - October 1, 2009
+-  Added history file expiration.
+-  Re-wrote regex filter sub so that filters are a first match.
+-  Added a debug option.
+-  Added a default retention period for expiration of history.
+0.0.3 - September 28, 2009
+-  Added exclude list.
+-  Filters are now case insensative.
+-  Added transmission-remote arguments in config.
+-  Code cleanup.
+-  Added basic commandline options.
+0.0.2 - September 27, 2009
+-  Added config file.
+-  Added filters with regex capabilities.
+0.0.1 - September 25, 2009
+-  Basic script. Grab feed, parse it, grab everything not in the hist file.
