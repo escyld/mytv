@@ -139,7 +139,7 @@ for $show (@{$results{'items'}}) {
 }
 close (TEMPFILE);
 if (defined $options{d}) {
-#	unlink ($tempFile);
+	unlink ($tempFile);
 } else {
     unlink ($historyFile);
     move ($tempFile,$historyFile);
