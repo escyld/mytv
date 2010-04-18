@@ -2,7 +2,7 @@
 
 # myTV
 # Scrape the Television related RSS feeds and submit new torrents to transmission-daemon
-# Version 0.1.1
+# Version 0.1.2
 
 # Copyright 2009 Terry Soucy <tsoucy@nb.sympatico.ca>
 # Released under the GNU Public License v2
@@ -28,7 +28,7 @@ my (%userPrefs,%options,%show,%results,@userFilters,%postForm) = ();
 my ($episodeInfo,$torrentStatus);
 my $lineNumber = 0;
 my $appName = "myTV";
-my $version = "0.1.1";
+my $version = "0.1.2";
 my $configFile = "/etc/mytv.conf";
 getopts("c:dh",\%options);
 if (defined $options{h}) {
@@ -81,9 +81,11 @@ if (defined $options{d}) {
 }
 while (<HISTFILE>) {
     chomp;
+	s/\((.*)\)/$1/;										# Remove () from show name
     my $line = $_;
     for $show (@{$results{'items'}}) {
 		$episodeInfo = getShowInfo($show->{'title'});
+		$episodeInfo =~ s/\((.*)\)/$1/;					# There shouldn't be any () in the history file
 		if ($line =~ /^$episodeInfo/) {
 			if (defined $options{d}) {
 				printDebug(2,"$episodeInfo present in history file");
@@ -97,6 +99,7 @@ while (<HISTFILE>) {
 		}
         next;
     }
+	print TEMPFILE $line."\n";
 }
 close (HISTFILE);
 if (defined $options{d}) {
@@ -108,6 +111,7 @@ if (!checkDaemon()) {
 }
 for $show (@{$results{'items'}}) {
     $episodeInfo = getShowInfo($show->{'title'});
+	$episodeInfo =~ s/\((.*)\)/$1/;
     if (!defined $show->{'seen'} && defined $episodeInfo) {
         if (checkFilter($show->{'title'})) {
             $show->{'link'} =~ s/&amp;/&/g;				# We need to replace &amp; with &
@@ -135,7 +139,7 @@ for $show (@{$results{'items'}}) {
 }
 close (TEMPFILE);
 if (defined $options{d}) {
-	unlink ($tempFile);
+#	unlink ($tempFile);
 } else {
     unlink ($historyFile);
     move ($tempFile,$historyFile);
