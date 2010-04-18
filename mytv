@@ -193,15 +193,13 @@ sub getShowInfo {
 		($name, $season, $episode) = ($1, $2, $3);
 	} elsif ($title =~ /(.*) - (\d{1,2})[xX](\S{1,3})/) {	# Showname NxNN or NxAll
 		($name, $season, $episode) = ($1, $2, $3);
-	#} elsif ($title =~ /(.*) - (\d{1,2})[xX](All)/) {		# Showname NxAll - Full Season
-	#	($name, $season, $episode) = ($1, $2, $3);
 	} else {
 		return undef;
 	}
-	if (length($season) == 1) {
+	if (length($season) == 1) {								# Fix season to ensure it is always 2 digits
 		$season = "0".$season;
 	}
-	$name =~ s/^HD 720p: //i; # ShowRSS will sometimes prefix HD content with HD 720p:
+	$name =~ s/^HD 720p: //i;								# ShowRSS will sometimes prefix HD content with HD 720p:
 	$episodeInfo = uc("$name-$season$episode");
 	if ($title =~ /(720|1080)/) {
 		$quality = "HD";
