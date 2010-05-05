@@ -2,7 +2,7 @@
 
 # myTV
 # Scrape the Television related RSS feeds and submit new torrents to transmission-daemon
-# Version 0.1.2
+# Version 0.2.0
 
 # Copyright 2009 Terry Soucy <tsoucy@nb.sympatico.ca>
 # Released under the GNU Public License v2
@@ -11,7 +11,6 @@ use LWP::Simple;
 use LWP::UserAgent;
 use JSON;
 use XML::RSSLite;
-use Net::Twitter;
 use Getopt::Std;
 use File::Copy;
 use IO::Socket;
@@ -60,6 +59,11 @@ while (<CONFIGFILE>) {
     }
 }
 close(CONFIGFILE);
+
+# If we don't need the twitter libs, then don't try to load them
+if (uc($userPrefs{"twitterNotify"}) eq "YES") {
+	use Net::Twitter;
+}
 
 my $historyFile = $userPrefs{'cacheDir'}."/mytv.hist";
 my $tempFile = $userPrefs{'cacheDir'}."/mytv.tmp";
