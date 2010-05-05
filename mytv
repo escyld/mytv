@@ -27,7 +27,7 @@ my (%userPrefs,%options,%show,%results,@userFilters,%postForm) = ();
 my ($episodeInfo,$torrentStatus);
 my $lineNumber = 0;
 my $appName = "myTV";
-my $version = "0.1.2";
+my $version = "0.2.0";
 my $configFile = "/etc/mytv.conf";
 getopts("c:dh",\%options);
 if (defined $options{h}) {
@@ -51,7 +51,7 @@ while (<CONFIGFILE>) {
     s/\s+$//;
     next unless length;
     my ($var, $value) = split(/\s*=\s*/, $_, 2);
-    $var=~/(twitterNotify|twitterUser|twitterPass|cacheDir|cacheHistory|transmissionHost|transmissionPort|transmissionUser|transmissionPass|shareRatio|defaultDestination|feed|filter)/ or die "Unknown configuration option: $var on line $lineNumber\n";
+    $var=~/(twitterNotify|twitterUser|twitterPass|cacheDir|cacheHistory|transmissionHost|transmissionPort|transmissionUser|transmissionPass|shareRatio|defaultDestination|feed|filter|downloadDir)/ or die "Unknown configuration option: $var on line $lineNumber\n";
     if ($var =~ m/^filter/) {
         push (@userFilters,$value);
     } else {
@@ -63,6 +63,15 @@ close(CONFIGFILE);
 # If we don't need the twitter libs, then don't try to load them
 if (uc($userPrefs{"twitterNotify"}) eq "YES") {
 	use Net::Twitter;
+}
+
+# Verify that the directories listed in the config file actually exist.
+if (-d $userPrefs{'cacheDir'}) {
+	die "myTV ERROR: cacheDir ".$userPrefs{'cacheDir'}."does not existi: $!";
+}
+
+if ( -d $userPrefs{'downloadDir'}) {
+	die "myTV ERROR: downloadDir ".$userPrefs{'downloadDir'}."does not exist: $!";
 }
 
 my $historyFile = $userPrefs{'cacheDir'}."/mytv.hist";
@@ -165,12 +174,18 @@ foreach my $torrent (@$torrentStatus) {
 				$torrent->{'name'} =~ s/\./ /g;
 				$torrent->{'name'} =~ s/avi$//i;
     			if (defined $options{d}) {
-	    			printDebug(2,"Moving torrent ".$torrent->{'id'}." to $destination");
+					if ($currentLocation ne $userPrefs{'downloadDir'}) {
+						printDebug(2,"Filled Torrent ".$torrent->{'id'}." NOT in DefaultDir. in $currentLocation");
+					} else {
+	    				printDebug(2,"Moving torrent ".$torrent->{'id'}." to $destination");
+					}
 		    	} else {
 		    	    if (uc($userPrefs{'twitterNotify'}) eq "YES") {
 					    notify("$appName: ".$torrent->{'name'}." completed and ready to watch");
 					}
-			    	moveTorrent($torrent->{'id'},$destination);
+					if ($currentLocation eq $userPrefs{'downloadDir'}) {
+			    		moveTorrent($torrent->{'id'},$destination);
+					}
 			    }
 			} else {
 			    if (defined $options{d}) {
@@ -278,7 +293,7 @@ sub checkDaemon {
 
 sub addTorrent {
 	my $link = shift;
-	my %arguments = (filename => $link, paused => FALSE);
+	my %arguments = (download-dir => $userPrefs{'downloadDir'}, filename => $link, paused => FALSE);
 	my $response = rpc("torrent-add",\%arguments);
     if ($response->{'result'} eq "success") {
         return TRUE;
