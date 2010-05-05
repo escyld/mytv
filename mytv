@@ -19,9 +19,9 @@ use IO::Socket;
 use constant {
 	FALSE		=> 0,
 	TRUE		=> 1,
-    DOWNLOADING	=> 4,
-    DONE		=> 8,
-    PAUSED		=> 16};
+	DOWNLOADING	=> 4,
+	DONE		=> 8,
+	PAUSED		=> 16};
 
 my (%userPrefs,%options,%show,%results,@userFilters,%postForm) = ();
 my ($episodeInfo,$torrentStatus);
@@ -31,8 +31,8 @@ my $version = "0.2.0";
 my $configFile = "/etc/mytv.conf";
 getopts("c:dh",\%options);
 if (defined $options{h}) {
-    print "$appName version $version\nOptions:\n\t-c <filename>\tLoad alternate config file\n\t\t\tDefault is /etc/mytv.conf\n\t-d\t\tDebug mode. No actions are performed\n\t-h\t\tDisplay help text and exit\n";
-    exit;
+	print "$appName version $version\nOptions:\n\t-c <filename>\tLoad alternate config file\n\t\t\tDefault is /etc/mytv.conf\n\t-d\t\tDebug mode. No actions are performed\n\t-h\t\tDisplay help text and exit\n";
+	exit;
 }
 $configFile = $options{c} if defined $options{c};
 if (defined $options{d}) {
@@ -44,19 +44,19 @@ if (defined $options{d}) {
 }
 open(CONFIGFILE, "< $configFile") or die "Error opening config file $configFile: $!";
 while (<CONFIGFILE>) {
-    chomp;
+	chomp;
 	$lineNumber++;
-    s/#.*//;
-    s/^\s+//;
-    s/\s+$//;
-    next unless length;
-    my ($var, $value) = split(/\s*=\s*/, $_, 2);
-    $var=~/(twitterNotify|twitterUser|twitterPass|cacheDir|cacheHistory|transmissionHost|transmissionPort|transmissionUser|transmissionPass|shareRatio|defaultDestination|feed|filter|downloadDir)/ or die "Unknown configuration option: $var on line $lineNumber\n";
-    if ($var =~ m/^filter/) {
-        push (@userFilters,$value);
-    } else {
-        $userPrefs{$var} = $value;
-    }
+	s/#.*//;
+	s/^\s+//;
+	s/\s+$//;
+	next unless length;
+	my ($var, $value) = split(/\s*=\s*/, $_, 2);
+	$var=~/(twitterNotify|twitterUser|twitterPass|cacheDir|cacheHistory|transmissionHost|transmissionPort|transmissionUser|transmissionPass|shareRatio|defaultDestination|feed|filter|downloadDir)/ or die "Unknown configuration option: $var on line $lineNumber\n";
+	if ($var =~ m/^filter/) {
+		push (@userFilters,$value);
+	} else {
+		$userPrefs{$var} = $value;
+	}
 }
 close(CONFIGFILE);
 
@@ -66,12 +66,12 @@ if (uc($userPrefs{"twitterNotify"}) eq "YES") {
 }
 
 # Verify that the directories listed in the config file actually exist.
-if (-d $userPrefs{'cacheDir'}) {
-	die "myTV ERROR: cacheDir ".$userPrefs{'cacheDir'}."does not existi: $!";
+if ( ! -d $userPrefs{'cacheDir'}) {
+	die "myTV ERROR: cacheDir ".$userPrefs{'cacheDir'}." does not existi: $!";
 }
 
-if ( -d $userPrefs{'downloadDir'}) {
-	die "myTV ERROR: downloadDir ".$userPrefs{'downloadDir'}."does not exist: $!";
+if ( ! -d $userPrefs{'downloadDir'}) {
+	die "myTV ERROR: downloadDir ".$userPrefs{'downloadDir'}." does not exist: $!";
 }
 
 my $historyFile = $userPrefs{'cacheDir'}."/mytv.hist";
@@ -93,10 +93,10 @@ if (defined $options{d}) {
 	printDebug(1,"Cleaning history");
 }
 while (<HISTFILE>) {
-    chomp;
+	chomp;
 	s/\((.*)\)/$1/;										# Remove () from show name
-    my $line = $_;
-    for $show (@{$results{'items'}}) {
+	my $line = $_;
+	for $show (@{$results{'items'}}) {
 		$episodeInfo = getShowInfo($show->{'title'});
 		$episodeInfo =~ s/\((.*)\)/$1/;					# There shouldn't be any () in the history file
 		if ($line =~ /^$episodeInfo/) {
@@ -106,12 +106,12 @@ while (<HISTFILE>) {
 			$show->{'seen'} = TRUE;
 		}
 	}
-    if (($line =~ m/\s(\d*)$/) && ($1 < (time - (86400 * $userPrefs{'cacheHistory'})))) {
-        if (defined $options{d}) {
+	if (($line =~ m/\s(\d*)$/) && ($1 < (time - (86400 * $userPrefs{'cacheHistory'})))) {
+		if (defined $options{d}) {
 			printDebug(2,"Expiring $line");
 		}
-        next;
-    }
+		next;
+	}
 	print TEMPFILE $line."\n";
 }
 close (HISTFILE);
@@ -123,39 +123,39 @@ if (!checkDaemon()) {
 	exit;
 }
 for $show (@{$results{'items'}}) {
-    $episodeInfo = getShowInfo($show->{'title'});
+	$episodeInfo = getShowInfo($show->{'title'});
 	$episodeInfo =~ s/\((.*)\)/$1/;
-    if (!defined $show->{'seen'} && defined $episodeInfo) {
-        if (checkFilter($show->{'title'})) {
-            $show->{'link'} =~ s/&amp;/&/g;				# We need to replace &amp; with &
-            if (defined $options{d}) {
-                printDebug(2,"Getting ".$show->{'title'});
-            } else {
-                if (!addTorrent($show->{'link'})) {
+	if (!defined $show->{'seen'} && defined $episodeInfo) {
+		if (checkFilter($show->{'title'})) {
+			$show->{'link'} =~ s/&amp;/&/g;				# We need to replace &amp; with &
+			if (defined $options{d}) {
+				printDebug(2,"Getting ".$show->{'title'});
+			} else {
+				if (!addTorrent($show->{'link'})) {
 					print "myTV ERROR: Unable to add torrent ".$show->{'title'};
 				}
-            }
-        } else {
-            if (defined $options{d}) {
-                if (!defined checkFilter($show->{'title'})) {
-				    printDebug(2,"Skipping ".$show->{'title'}." (no match)");
+			}
+		} else {
+			if (defined $options{d}) {
+				if (!defined checkFilter($show->{'title'})) {
+					printDebug(2,"Skipping ".$show->{'title'}." (no match)");
 				} else {
-				    printDebug(2,"Skipping ".$show->{'title'}." (excluded)");
+					printDebug(2,"Skipping ".$show->{'title'}." (excluded)");
 				}
 			}
-        }
-    } else {
-        if (defined $options{d}) {
-            printDebug(2,$show->{'title'}." (history)");
-        }
-    }
+		}
+	} else {
+		if (defined $options{d}) {
+			printDebug(2,$show->{'title'}." (history)");
+		}
+	}
 }
 close (TEMPFILE);
 if (defined $options{d}) {
 	unlink ($tempFile);
 } else {
-    unlink ($historyFile);
-    move ($tempFile,$historyFile);
+	unlink ($historyFile);
+	move ($tempFile,$historyFile);
 }
 
 # Torrent Management
@@ -166,32 +166,32 @@ $torrentStatus = listTorrents();
 foreach my $torrent (@$torrentStatus) {
 	if ($torrent->{'status'} == DONE) {
 		if ($torrent->{'uploadRatio'} < $userPrefs{'shareRatio'}) {
-		    my $currentLocation = getCurrentLocation($torrent->{'id'});
+			my $currentLocation = getCurrentLocation($torrent->{'id'});
 			my $destination = getDestination($torrent->{'name'},\@userFilters) || $userPrefs{'defaultDestination'};
 			if ($currentLocation ne $destination) {
 				# Sanitize the name of the show for printing
 				$torrent->{'name'} =~ s/([Ss]\d{1,2}[Ee]\d{1,2})\S*$/$1/;
 				$torrent->{'name'} =~ s/\./ /g;
 				$torrent->{'name'} =~ s/avi$//i;
-    			if (defined $options{d}) {
+				if (defined $options{d}) {
 					if ($currentLocation ne $userPrefs{'downloadDir'}) {
 						printDebug(2,"Filled Torrent ".$torrent->{'id'}." NOT in DefaultDir. in $currentLocation");
 					} else {
-	    				printDebug(2,"Moving torrent ".$torrent->{'id'}." to $destination");
+						printDebug(2,"Moving torrent ".$torrent->{'id'}." to $destination");
 					}
-		    	} else {
-		    	    if (uc($userPrefs{'twitterNotify'}) eq "YES") {
-					    notify("$appName: ".$torrent->{'name'}." completed and ready to watch");
+				} else {
+					if (uc($userPrefs{'twitterNotify'}) eq "YES") {
+						notify("$appName: ".$torrent->{'name'}." completed and ready to watch");
 					}
 					if ($currentLocation eq $userPrefs{'downloadDir'}) {
-			    		moveTorrent($torrent->{'id'},$destination);
+						moveTorrent($torrent->{'id'},$destination);
 					}
-			    }
+				}
 			} else {
-			    if (defined $options{d}) {
-	    			printDebug(2,"Torrent ".$torrent->{'id'}." already at $destination");
-	    		}
-	    	}
+				if (defined $options{d}) {
+					printDebug(2,"Torrent ".$torrent->{'id'}." already at $destination");
+				}
+			}
 		} else {
 			if (defined $options{d}) {
 				printDebug(2,"Removing torrent ".$torrent->{'id'}." with ratio ".$torrent->{'uploadRatio'});
@@ -229,22 +229,22 @@ sub getShowInfo {
 }
 
 sub checkFilter {
-    my $showName = shift;
-    foreach my $line (@userFilters) {
-        my $filter = substr(substr($line,0,index($line,"::")),1);     
-        if (($showName =~ m/$filter/i) && (substr($line,0,1) eq "+")) {
-            return TRUE;
-        } elsif (($showName =~ m/$filter/i) && (substr($line,0,1) eq "-")) {
-            return FALSE;
-        }
-    }
-    return undef;
+	my $showName = shift;
+	foreach my $line (@userFilters) {
+		my $filter = substr(substr($line,0,index($line,"::")),1);	 
+		if (($showName =~ m/$filter/i) && (substr($line,0,1) eq "+")) {
+			return TRUE;
+		} elsif (($showName =~ m/$filter/i) && (substr($line,0,1) eq "-")) {
+			return FALSE;
+		}
+	}
+	return undef;
 }
 
 sub getDestination {
-    my $showName = shift;
-    my $showFilters = shift;
-    foreach my $line (@$showFilters) {
+	my $showName = shift;
+	my $showFilters = shift;
+	foreach my $line (@$showFilters) {
 		if (substr($line,0,1) eq "+") {
 			my ($filter,$destination) = split(/::/,$line);
 			if ((defined $filter) && (defined $destination)) {
@@ -260,33 +260,33 @@ sub getDestination {
 }
 
 sub getCurrentLocation {
-    my $id = shift;
-    my %arguments = (fields => ['downloadDir'],ids => [int($id)]);
-    my $response = rpc("torrent-get",\%arguments);
-    if ($response->{'result'} eq "success") {
-        my $torrents = $response->{'arguments'}->{'torrents'};
+	my $id = shift;
+	my %arguments = (fields => ['downloadDir'],ids => [int($id)]);
+	my $response = rpc("torrent-get",\%arguments);
+	if ($response->{'result'} eq "success") {
+		my $torrents = $response->{'arguments'}->{'torrents'};
 		return @$torrents[0]->{'downloadDir'};
-    }
-    return undef;
+	}
+	return undef;
 }
 
 sub listTorrents {
-    my %arguments = (fields => ['id','name','status','uploadRatio']);
-    my $response = rpc("torrent-get",\%arguments);
-    if ($response->{'result'} eq "success") {
-        return $response->{'arguments'}->{'torrents'};
-    }
-    return undef;
+	my %arguments = (fields => ['id','name','status','uploadRatio']);
+	my $response = rpc("torrent-get",\%arguments);
+	if ($response->{'result'} eq "success") {
+		return $response->{'arguments'}->{'torrents'};
+	}
+	return undef;
 }
 
 sub checkDaemon {
-    my $sock = new IO::Socket::INET(
-        PeerAddr=>$userPrefs{'transmissionHost'},
-        PeerPort=>$userPrefs{'transmissionPort'},
-        Proto=>'tcp');
-    if($sock) {
-        $sock->shutdown(2);
-        return TRUE;
+	my $sock = new IO::Socket::INET(
+		PeerAddr=>$userPrefs{'transmissionHost'},
+		PeerPort=>$userPrefs{'transmissionPort'},
+		Proto=>'tcp');
+	if($sock) {
+		$sock->shutdown(2);
+		return TRUE;
 	}
 	return undef;
 }
@@ -295,10 +295,10 @@ sub addTorrent {
 	my $link = shift;
 	my %arguments = (download-dir => $userPrefs{'downloadDir'}, filename => $link, paused => FALSE);
 	my $response = rpc("torrent-add",\%arguments);
-    if ($response->{'result'} eq "success") {
-        return TRUE;
-    }
-    return undef;
+	if ($response->{'result'} eq "success") {
+		return TRUE;
+	}
+	return undef;
 }
 
 sub moveTorrent {
@@ -306,27 +306,27 @@ sub moveTorrent {
 	my $destination = shift;
 	my %arguments = (ids => [int($id)], location => $destination, move => 1);
 	my $response = rpc("torrent-set-location",\%arguments);
-    if ($response->{'result'} eq "success") {
-        return TRUE;
-    }
-    return undef;
+	if ($response->{'result'} eq "success") {
+		return TRUE;
+	}
+	return undef;
 }
 
 sub removeTorrent {
 	my $id = shift;
 	my %arguments = (ids => [int($id)]);
 	my $response = rpc("torrent-remove",\%arguments);
-    if ($response->{'result'} eq "success") {
-        return TRUE;
-    }
-    return undef;
+	if ($response->{'result'} eq "success") {
+		return TRUE;
+	}
+	return undef;
 }
 	
 sub printDebug {
 	my $debugLevel = shift;
 	my $message = shift;
 	while ($debugLevel-- > 0) {
-	    print "  ";
+		print "  ";
 	}
 	print " $message.\n";
 	return;
