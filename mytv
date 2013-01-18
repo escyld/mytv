@@ -51,7 +51,7 @@ while (<CONFIGFILE>) {
 	s/\s+$//;
 	next unless length;
 	my ($var, $value) = split(/\s*=\s*/, $_, 2);
-	$var=~/(twitterNotify|twitterUser|twitterPass|cacheDir|cacheHistory|transmissionHost|transmissionPort|transmissionUser|transmissionPass|shareRatio|defaultDestination|feed|filter|downloadDir)/ or die "Unknown configuration option: $var on line $lineNumber\n";
+	$var=~/(twitterNotify|twitterUser|consumer_key|consumer_secret|token|token_secret|cacheDir|cacheHistory|transmissionHost|transmissionPort|transmissionUser|transmissionPass|shareRatio|defaultDestination|feed|filter|downloadDir)/ or die "Unknown configuration option: $var on line $lineNumber\n";
 	if ($var =~ m/^filter/) {
 		push (@userFilters,$value);
 	} else {
@@ -70,9 +70,9 @@ if ( ! -d $userPrefs{'cacheDir'}) {
 	die "myTV ERROR: cacheDir ".$userPrefs{'cacheDir'}." does not existi: $!";
 }
 
-if ( ! -d $userPrefs{'downloadDir'}) {
-	die "myTV ERROR: downloadDir ".$userPrefs{'downloadDir'}." does not exist: $!";
-}
+#if ( ! -d $userPrefs{'downloadDir'}) {
+#	die "myTV ERROR: downloadDir ".$userPrefs{'downloadDir'}." does not exist: $!";
+#}
 
 my $historyFile = $userPrefs{'cacheDir'}."/mytv.hist";
 my $tempFile = $userPrefs{'cacheDir'}."/mytv.tmp";
@@ -124,6 +124,9 @@ if (!checkDaemon()) {
 }
 for $show (@{$results{'items'}}) {
 	$episodeInfo = getShowInfo($show->{'title'});
+        if(!defined $episodeInfo) {
+            $episodeInfo = 'Show-S00E00-SD';
+        }
 	$episodeInfo =~ s/\((.*)\)/$1/;
 	if (!defined $show->{'seen'} && defined $episodeInfo) {
 		if (checkFilter($show->{'title'})) {
@@ -133,6 +136,11 @@ for $show (@{$results{'items'}}) {
 			} else {
 				if (!addTorrent($show->{'link'})) {
 					print "myTV ERROR: Unable to add torrent ".$show->{'title'};
+				}
+				else {
+					print TEMPFILE $episodeInfo . time . "\n";
+					notify("$appName: ".$show->{'title'}." added to download queue");
+					
 				}
 			}
 		} else {
@@ -210,8 +218,10 @@ sub getShowInfo {
 	my ($episodeInfo,$quality,$name,$season,$episode);
 	if ($title =~ /(.*) [Ss](\d\d)[Ee](\d\d)/) {			# Showname SNNENN
 		($name, $season, $episode) = ($1, $2, $3);
-	} elsif ($title =~ /(.*) - (\d{1,2})[xX](\S{1,3})/) {	# Showname NxNN or NxAll
+	} elsif ($title =~ /(.*).*(\d{1,2})[xX](\S{1,3})/) {	# Showname NxNN or NxAll
 		($name, $season, $episode) = ($1, $2, $3);
+	} elsif ($title =~ /(.*) 201. (\d\d) (\d\d)/) {
+		($name, $season, $episode) = ($1, $3, $2);
 	} else {
 		return undef;
 	}
@@ -293,9 +303,12 @@ sub checkDaemon {
 
 sub addTorrent {
 	my $link = shift;
-	my %arguments = (download-dir => $userPrefs{'downloadDir'}, filename => $link, paused => FALSE);
+	#my %arguments = ('download-dir' => $userPrefs{'downloadDir'}, filename => $link, paused => FALSE);
+	my %arguments = ('filename' => $link, 'paused' => FALSE, 'peer-limit' => 150);
 	my $response = rpc("torrent-add",\%arguments);
-	if ($response->{'result'} eq "success") {
+	
+	#printDebug(2, "#" . $response->{'result'} . "#");
+	if (($response->{'result'} eq "success") || ($response->{'result'} eq "duplicate torrent")){
 		return TRUE;
 	}
 	return undef;
@@ -355,9 +368,13 @@ sub notify {
 	$dm{'user'} = $userPrefs{'twitterUser'};
 	$dm{'text'} = $message;
 	my $nt = Net::Twitter->new(
-		traits   => [qw/API::REST/],
-		username => $userPrefs{'twitterUser'},
-		password => $userPrefs{'twitterPass'}
+		traits   => [qw/OAuth API::REST/],
+		consumer_key        => $userPrefs{'consumer_key'},
+		consumer_secret     => $userPrefs{'consumer_secret'},
+		access_token        => $userPrefs{'token'},
+		access_token_secret => $userPrefs{'token_secret'},
 	);
-	return $nt->new_direct_message(\%dm);
+	my $ ret = $nt->new_direct_message(\%dm);
+print "twitter dm:" . $ret;
+	return $ret;
 }
