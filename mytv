@@ -79,14 +79,16 @@ my $tempFile = $userPrefs{'cacheDir'}."/mytv.tmp";
 if (!defined $userPrefs{'cacheHistory'}) {
 	$userPrefs{'cacheHistory'} = 1;
 }
+
 my $feed = get($userPrefs{'feed'}) || die "myTV ERROR: Could not retrieve RSS feed: $!";
 
 # Torrent Scraper
 if (defined $options{d}) {
 	printDebug(1,"Loading RSS feed");
 }
+
 parseRSS(\%results,\$feed);
-system("touch $historyFile");
+#system("touch $historyFile");
 open(HISTFILE, "< $historyFile") || die "myTV ERROR: Error opening history file $historyFile: $!";
 open(TEMPFILE, "> $tempFile") || die "myTV ERROR: Error creating temporary file $tempFile: $!";
 if (defined $options{d}) {
@@ -98,6 +100,7 @@ while (<HISTFILE>) {
 	my $line = $_;
 	for $show (@{$results{'items'}}) {
 		$episodeInfo = getShowInfo($show->{'title'});
+		#printDebug(1,"myEpisodeInfo=$episodeInfo");
 		$episodeInfo =~ s/\((.*)\)/$1/;					# There shouldn't be any () in the history file
 		if ($line =~ /^$episodeInfo/) {
 			if (defined $options{d}) {
@@ -133,16 +136,19 @@ for $show (@{$results{'items'}}) {
 			$show->{'link'} =~ s/&amp;/&/g;				# We need to replace &amp; with &
 			if (defined $options{d}) {
 				printDebug(2,"Getting ".$show->{'title'});
-			} else {
-				if (!addTorrent($show->{'link'})) {
-					print "myTV ERROR: Unable to add torrent ".$show->{'title'};
+			} #else {
+                print "Getting ".$show->{'title'} . "\n";
+				my $dest = getDestination($show->{'title'},\@userFilters);
+                print "Destination: $dest\n";
+				if (!addTorrent($show->{'link'}, $dest)) {
+					print "myTV ERROR: Unable to add torrent ".$show->{'title'} . "\n";
 				}
 				else {
 					print TEMPFILE $episodeInfo . time . "\n";
 					notify("$appName: ".$show->{'title'}." added to download queue");
 					
 				}
-			}
+			#}
 		} else {
 			if (defined $options{d}) {
 				if (!defined checkFilter($show->{'title'})) {
@@ -172,7 +178,8 @@ if (defined $options{d}) {
 }
 $torrentStatus = listTorrents();
 foreach my $torrent (@$torrentStatus) {
-	if ($torrent->{'status'} == DONE) {
+#print "torrentStst:" . $torrent->{'status'};
+	if ($torrent->{'status'} == 6) {
 		if ($torrent->{'uploadRatio'} < $userPrefs{'shareRatio'}) {
 			my $currentLocation = getCurrentLocation($torrent->{'id'});
 			my $destination = getDestination($torrent->{'name'},\@userFilters) || $userPrefs{'defaultDestination'};
@@ -215,12 +222,13 @@ exit;
 
 sub getShowInfo {
 	my $title = shift;
+	#printDebug(1,"mytitle: $title");
 	my ($episodeInfo,$quality,$name,$season,$episode);
 	if ($title =~ /(.*) [Ss](\d\d)[Ee](\d\d)/) {			# Showname SNNENN
 		($name, $season, $episode) = ($1, $2, $3);
 	} elsif ($title =~ /(.*).*(\d{1,2})[xX](\S{1,3})/) {	# Showname NxNN or NxAll
 		($name, $season, $episode) = ($1, $2, $3);
-	} elsif ($title =~ /(.*) 201. (\d\d) (\d\d)/) {
+	} elsif ($title =~ /(.*) 201..(\d\d).(\d\d)/) {
 		($name, $season, $episode) = ($1, $3, $2);
 	} else {
 		return undef;
@@ -303,8 +311,9 @@ sub checkDaemon {
 
 sub addTorrent {
 	my $link = shift;
+	my $dir = shift;
 	#my %arguments = ('download-dir' => $userPrefs{'downloadDir'}, filename => $link, paused => FALSE);
-	my %arguments = ('filename' => $link, 'paused' => FALSE, 'peer-limit' => 150);
+	my %arguments = ('download-dir' => $dir, 'filename' => $link, 'paused' => FALSE, 'peer-limit' => 150);
 	my $response = rpc("torrent-add",\%arguments);
 	
 	#printDebug(2, "#" . $response->{'result'} . "#");
@@ -354,25 +363,28 @@ sub rpc {
 	$userAgent -> credentials ($userPrefs{'transmissionHost'}.":".$userPrefs{'transmissionPort'},
 		"Transmission",
 		$userPrefs{'transmissionUser'} => $userPrefs{'transmissionPass'});
+    #print "Request Args:" .  $formArgs . "\n";
 	my $response = $userAgent->post ("http://$userPrefs{'transmissionHost'}:$userPrefs{'transmissionPort'}/transmission/rpc", Content => $formArgs);
 	if (!($response->is_success) && ($response->code == 409)) {
 		$userAgent->default_header($sessionIdHeader => $response->header($sessionIdHeader));
 		$response = $userAgent->post ("http://$userPrefs{'transmissionHost'}:$userPrefs{'transmissionPort'}/transmission/rpc", Content => $formArgs);
 	}
+    #print "Response JSON:" . $response->content . "\n";
 	return from_json($response->content);
 }
 
 sub notify {
 	my $message = shift;
 	my %dm = ();
-	$dm{'user'} = $userPrefs{'twitterUser'};
+	$dm{'screen_name'} = $userPrefs{'twitterUser'};
 	$dm{'text'} = $message;
 	my $nt = Net::Twitter->new(
-		traits   => [qw/OAuth API::REST/],
+		traits   => [qw/OAuth API::RESTv1_1/],
 		consumer_key        => $userPrefs{'consumer_key'},
 		consumer_secret     => $userPrefs{'consumer_secret'},
 		access_token        => $userPrefs{'token'},
 		access_token_secret => $userPrefs{'token_secret'},
+		ssl	=>  1,
 	);
 	my $ ret = $nt->new_direct_message(\%dm);
 print "twitter dm:" . $ret;
